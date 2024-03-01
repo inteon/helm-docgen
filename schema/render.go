@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cert-manager/helm-tool/heuristics"
 	"github.com/cert-manager/helm-tool/parser"
 	"github.com/cert-manager/helm-tool/paths"
 	"gopkg.in/yaml.v3"
@@ -101,6 +102,20 @@ func Render(document *parser.Document) (string, error) {
 		return "", err
 	}
 
+	tree.add(paths.Path{}.WithProperty("global"), parser.Property{
+		Type: parser.TypeUnknown,
+		Description: parser.Comment{
+			CommentBlock: heuristics.CommentBlock{
+				Segments: []heuristics.CommentBlockSegment{
+					{
+						Type:     heuristics.ContentTypeText,
+						Contents: []string{"Global values shared across all (sub)charts"},
+					},
+				},
+			},
+		},
+	})
+
 	definitions := spec.Definitions{}
 
 	tree.walk(func(level treeLevel) {
@@ -153,12 +168,6 @@ func Render(document *parser.Document) (string, error) {
 
 		definitions[prefixName(level.Path.String())] = newSchema
 	})
-
-	definitions["global"] = spec.Schema{
-		SchemaProps: spec.SchemaProps{
-			Description: "Global values shared across all (sub)charts",
-		},
-	}
 
 	type JsonSchema struct {
 		Schema string           `json:"$schema,omitempty"`
